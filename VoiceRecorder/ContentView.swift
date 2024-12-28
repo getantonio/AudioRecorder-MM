@@ -29,63 +29,82 @@ struct ContentView: View {
     var body: some View {
         NavigationView {
             VStack(spacing: 20) {
-                // Visualization
-                ZStack {
-                    RoundedRectangle(cornerRadius: 15)
-                        .fill(Color.gray.opacity(0.2))
-                        .frame(height: 200)
-                    
-                    AudioVisualizerView(
-                        viewModel: visualizerViewModel,
-                        isRecording: viewModel.isRecording
-                    )
-                }
-                .padding()
-                
-                // Recording info
-                HStack(spacing: 40) {
+                if !recordingManager.permissionGranted {
                     VStack {
-                        Text(String(format: "%02d:%02d", Int(viewModel.recordingTime) / 60, Int(viewModel.recordingTime) % 60))
-                            .font(.system(.title2, design: .monospaced))
-                        Text(viewModel.fileSize)
-                            .font(.caption)
+                        Text("Microphone Access Required")
+                            .font(.headline)
+                        Text("Please enable microphone access in Settings to record audio.")
+                            .multilineTextAlignment(.center)
                             .foregroundColor(.secondary)
-                    }
-                    
-                    VStack {
-                        Text("Stereo")
-                        Text(viewModel.sampleRate)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
-                
-                // Controls
-                HStack(spacing: 40) {
-                    Button(action: {
-                        if viewModel.isRecording {
-                            viewModel.stopRecording()
-                        } else {
-                            viewModel.startRecording()
+                        #if os(iOS)
+                        Button("Open Settings") {
+                            if let settingsURL = URL(string: UIApplication.openSettingsURLString) {
+                                UIApplication.shared.open(settingsURL)
+                            }
                         }
-                    }) {
-                        Image(systemName: viewModel.isRecording ? "stop.fill" : "record.circle")
-                            .font(.system(size: 44))
-                            .foregroundColor(viewModel.isRecording ? .red : .blue)
-                            .frame(width: 60, height: 60)
+                        .padding()
+                        #endif
+                    }
+                    .padding()
+                } else {
+                    // Visualization
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 15)
+                            .fill(Color.gray.opacity(0.2))
+                            .frame(height: 200)
+                        
+                        AudioVisualizerView(
+                            viewModel: visualizerViewModel,
+                            isRecording: viewModel.isRecording
+                        )
+                    }
+                    .padding()
+                    
+                    // Recording info
+                    HStack(spacing: 40) {
+                        VStack {
+                            Text(String(format: "%02d:%02d", Int(viewModel.recordingTime) / 60, Int(viewModel.recordingTime) % 60))
+                                .font(.system(.title2, design: .monospaced))
+                            Text(viewModel.fileSize)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        VStack {
+                            Text("Stereo")
+                            Text(viewModel.sampleRate)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
                     }
                     
-                    Button(action: {
-                        viewModel.pauseRecording()
-                    }) {
-                        Image(systemName: viewModel.isPaused ? "play.fill" : "pause.fill")
-                            .font(.system(size: 32))
-                            .foregroundColor(.blue)
-                            .frame(width: 60, height: 60)
+                    // Controls
+                    HStack(spacing: 40) {
+                        Button(action: {
+                            if viewModel.isRecording {
+                                viewModel.stopRecording()
+                            } else {
+                                viewModel.startRecording()
+                            }
+                        }) {
+                            Image(systemName: viewModel.isRecording ? "stop.fill" : "record.circle")
+                                .font(.system(size: 44))
+                                .foregroundColor(viewModel.isRecording ? .red : .blue)
+                                .frame(width: 60, height: 60)
+                        }
+                        
+                        Button(action: {
+                            viewModel.pauseRecording()
+                        }) {
+                            Image(systemName: viewModel.isPaused ? "play.fill" : "pause.fill")
+                                .font(.system(size: 32))
+                                .foregroundColor(.blue)
+                                .frame(width: 60, height: 60)
+                        }
                     }
+                    
+                    Spacer()
                 }
-                
-                Spacer()
             }
             .navigationTitle("Audio Recorder")
             .toolbar {

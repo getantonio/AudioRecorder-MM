@@ -15,34 +15,32 @@ class AudioVisualizerViewModel: ObservableObject {
         }
     }
     
-    func stopVisualization() {
-        timer?.invalidate()
-        timer = nil
-        amplitudes = Array(repeating: 0, count: 30)
-    }
-    
     private func updateAmplitudes(from recorder: AVAudioRecorder) {
         // Shift existing amplitudes to the left
         amplitudes.removeFirst()
         
         // Get the current audio level and normalize it
-        recorder.updateMeters()
         let level = recorder.averagePower(forChannel: 0)
         let normalizedValue = normalize(level)
         
-        // Add some minimum height for visual feedback
-        let minHeight: CGFloat = 0.05
-        amplitudes.append(max(normalizedValue, minHeight))
+        // Add new amplitude value
+        amplitudes.append(normalizedValue)
     }
     
     private func normalize(_ power: Float) -> CGFloat {
-        // Convert dB to a normalized value between 0 and 1
-        // dB range is typically -160 to 0
-        let minDb: Float = -50.0 // Increased sensitivity
+        // Adjust these values to make the visualization more sensitive
+        let minDb: Float = -60.0  // Increased sensitivity (was -50.0)
         let maxDb: Float = 0.0
         
-        let normalizedValue = max(0.0, min(1.0, (power - minDb) / (maxDb - minDb)))
-        return CGFloat(normalizedValue)
+        // Apply a non-linear scaling to make small sounds more visible
+        let normalizedValue = pow((power - minDb) / (maxDb - minDb), 2)
+        return CGFloat(max(0.0, min(1.0, normalizedValue))) * 0.8 + 0.2 // Add minimum height
+    }
+    
+    func stopVisualization() {
+        timer?.invalidate()
+        timer = nil
+        amplitudes = Array(repeating: 0, count: 30)
     }
 }
 

@@ -1,123 +1,97 @@
 import SwiftUI
-import AVFoundation
+import AVKit
 
 struct RecordingDetailView: View {
     let recording: Recording
-    @Environment(\.dismiss) var dismiss
-    @StateObject private var player = AudioPlayer()
+    @State private var audioPlayer: AVAudioPlayer?
+    @State private var isPlaying = false
+    @State private var currentTime: TimeInterval = 0
+    @State private var duration: TimeInterval = 0
     
     var body: some View {
-        NavigationView {
-            VStack(spacing: 20) {
-                Text(recording.name)
-                    .font(.title)
-                    .padding()
-                
-                Text(recording.date.formatted())
-                    .foregroundColor(.secondary)
-                
-                // Playback controls
-                HStack(spacing: 40) {
-                    Button(action: {
-                        if player.isPlaying {
-                            player.pause()
-                        } else {
-                            player.play()
+        VStack(spacing: 20) {
+            Text(recording.url.lastPathComponent)
+                .font(.title)
+                .multilineTextAlignment(.center)
+            
+            Text(recording.date.formatted())
+                .foregroundColor(.secondary)
+            
+            // Playback controls
+            HStack(spacing: 40) {
+                Button(action: {
+                    if isPlaying {
+                        audioPlayer?.pause()
+                    } else {
+                        if audioPlayer == nil {
+                            setupAudioPlayer()
                         }
-                    }) {
-                        Image(systemName: player.isPlaying ? "pause.circle.fill" : "play.circle.fill")
-                            .font(.system(size: 44))
+                        audioPlayer?.play()
                     }
-                    
-                    Button(action: player.stop) {
-                        Image(systemName: "stop.circle.fill")
-                            .font(.system(size: 44))
-                    }
+                    isPlaying.toggle()
+                }) {
+                    Image(systemName: isPlaying ? "pause.circle.fill" : "play.circle.fill")
+                        .font(.system(size: 44))
+                        .foregroundColor(.blue)
                 }
                 
-                // Progress
-                Text(player.timeString)
-                    .font(.caption)
-                    .monospacedDigit()
-            }
-            .padding()
-            .navigationTitle("Recording")
-            .toolbar {
-                #if os(iOS)
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        player.stop()
-                        dismiss()
-                    }
+                Button(action: {
+                    audioPlayer?.stop()
+                    audioPlayer?.currentTime = 0
+                    isPlaying = false
+                }) {
+                    Image(systemName: "stop.circle.fill")
+                        .font(.system(size: 44))
+                        .foregroundColor(.red)
                 }
-                #else
-                ToolbarItem {
-                    Button("Done") {
-                        player.stop()
-                        dismiss()
-                    }
-                }
-                #endif
             }
+            
+            // Time display
+            HStack {
+                Text(formatTime(currentTime))
+                Spacer()
+                Text(formatTime(duration))
+            }
+            .font(.system(.caption, design: .monospaced))
+            .padding(.horizontal)
+            
+            // Progress bar
+            ProgressView(value: currentTime, total: duration)
+                .padding(.horizontal)
         }
+        .padding()
         .onAppear {
-            player.setup(url: recording.url)
+            setupAudioPlayer()
         }
         .onDisappear {
-            player.stop()
+            audioPlayer?.stop()
+            audioPlayer = nil
         }
     }
-}
-
-class AudioPlayer: ObservableObject {
-    @Published var isPlaying = false
-    @Published var currentTime: TimeInterval = 0
-    private var audioPlayer: AVAudioPlayer?
-    private var timer: Timer?
     
-    var timeString: String {
-        let minutes = Int(currentTime) / 60
-        let seconds = Int(currentTime) % 60
-        return String(format: "%d:%02d", minutes, seconds)
-    }
-    
-    func setup(url: URL) {
+    private func setupAudioPlayer() {
         do {
-            audioPlayer = try AVAudioPlayer(contentsOf: url)
+            audioPlayer = try AVAudioPlayer(contentsOf: recording.url)
             audioPlayer?.prepareToPlay()
+            duration = audioPlayer?.duration ?? 0
+            
+            // Setup timer to update current time
+            Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
+                if let player = audioPlayer {
+                    currentTime = player.currentTime
+                    if !player.isPlaying {
+                        isPlaying = false
+                    }
+                }
+            }
         } catch {
-            print("Failed to create audio player: \(error.localizedDescription)")
+            print("Failed to initialize audio player: \(error.localizedDescription)")
         }
     }
     
-    func play() {
-        audioPlayer?.play()
-        isPlaying = true
-        startTimer()
-    }
-    
-    func pause() {
-        audioPlayer?.pause()
-        isPlaying = false
-        stopTimer()
-    }
-    
-    func stop() {
-        audioPlayer?.stop()
-        audioPlayer?.currentTime = 0
-        isPlaying = false
-        currentTime = 0
-        stopTimer()
-    }
-    
-    private func startTimer() {
-        timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
-            self?.currentTime = self?.audioPlayer?.currentTime ?? 0
-        }
-    }
-    
-    private func stopTimer() {
-        timer?.invalidate()
-        timer = nil
+    private func formatTime(_ time: TimeInterval) -> String {
+        let minutes = Int(time) / 60
+        let seconds = Int(time) % 60
+        return String(format: "%02d:%02d", minutes, seconds)
     }
 } 
