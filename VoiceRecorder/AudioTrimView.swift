@@ -5,10 +5,16 @@ struct AudioTrimView: View {
     let recording: Recording
     @State private var startTime: TimeInterval = 0
     @State private var endTime: TimeInterval
+    @State private var currentTime: TimeInterval = 0
     @State private var duration: TimeInterval = 0
     @State private var isPlaying = false
-    @State private var currentTime: TimeInterval = 0
     @State private var audioPlayer: AVAudioPlayer?
+    @State private var isDraggingSlider = false
+    @State private var selectedTool: EditTool = .trim
+    
+    enum EditTool {
+        case trim, removeMid, duplicate
+    }
     
     init(recording: Recording) {
         self.recording = recording
@@ -16,122 +22,197 @@ struct AudioTrimView: View {
         
         // Initialize audio player and get duration
         if let player = try? AVAudioPlayer(contentsOf: recording.url) {
-            self._duration = State(initialValue: player.duration)
-            self._endTime = State(initialValue: player.duration)
-            self.audioPlayer = player
+            _duration = State(initialValue: player.duration)
+            _endTime = State(initialValue: player.duration)
         }
     }
     
     var body: some View {
-        VStack(spacing: 20) {
-            // Waveform visualization
-            GeometryReader { geometry in
-                ZStack(alignment: .leading) {
-                    // Background
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(Color.gray.opacity(0.1))
-                    
-                    // Progress indicator
-                    Rectangle()
-                        .fill(Color.blue.opacity(0.2))
-                        .frame(width: geometry.size.width * CGFloat(currentTime / duration))
-                }
+        VStack(spacing: 0) {
+            // Waveform and timeline
+            ZStack(alignment: .top) {
+                // Timeline markers
+                TimelineView(duration: duration)
+                    .frame(height: 30)
+                
+                // Waveform
+                WaveformView(url: recording.url)
+                    .frame(height: 120)
+                    .padding(.top, 30)
+                
+                // Selection overlay
+                SelectionOverlay(startTime: $startTime, endTime: $endTime, currentTime: $currentTime, duration: duration)
             }
-            .frame(height: 100)
-            .overlay(
-                // Trim handles
-                HStack {
-                    trimHandle(position: $startTime)
-                    Spacer()
-                    trimHandle(position: $endTime)
-                }
-            )
+            .padding()
+            #if os(macOS)
+            .background(Color(NSColor.windowBackgroundColor))
+            #else
+            .background(Color(.systemGray6))
+            #endif
             
-            // Time indicators
-            HStack {
-                Text(timeString(from: startTime))
-                Spacer()
-                Text(timeString(from: endTime))
+            // Edit tools
+            HStack(spacing: 30) {
+                EditToolButton(tool: .trim, selectedTool: $selectedTool)
+                EditToolButton(tool: .removeMid, selectedTool: $selectedTool)
+                EditToolButton(tool: .duplicate, selectedTool: $selectedTool)
             }
-            .font(.caption)
-            .foregroundColor(.secondary)
+            .padding()
             
             // Playback controls
-            HStack(spacing: 40) {
-                Button(action: playPause) {
-                    Image(systemName: isPlaying ? "pause.circle.fill" : "play.circle.fill")
-                        .font(.system(size: 44))
+            VStack(spacing: 20) {
+                // Time slider
+                HStack {
+                    Text(timeString(from: currentTime))
+                    Slider(value: $currentTime, in: 0...duration) { isDragging in
+                        isDraggingSlider = isDragging
+                        if !isDragging {
+                            audioPlayer?.currentTime = currentTime
+                        }
+                    }
+                    Text(timeString(from: duration))
                 }
+                .padding(.horizontal)
                 
-                Button(action: trim) {
-                    Image(systemName: "scissors")
-                        .font(.system(size: 44))
+                // Transport controls
+                HStack(spacing: 40) {
+                    Button(action: skipBackward) {
+                        Image(systemName: "backward.fill")
+                            .font(.title)
+                    }
+                    
+                    Button(action: togglePlayback) {
+                        Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                            .font(.title)
+                    }
+                    
+                    Button(action: skipForward) {
+                        Image(systemName: "forward.fill")
+                            .font(.title)
+                    }
+                }
+            }
+            .padding()
+        }
+        .navigationTitle(recording.url.lastPathComponent)
+        .toolbar {
+            ToolbarItem {
+                Button("Save") {
+                    saveEdit()
                 }
             }
         }
-        .padding()
-        .navigationTitle("Edit Recording")
-        .onDisappear {
-            stopPlayback()
-        }
-    }
-    
-    private func trimHandle(position: Binding<TimeInterval>) -> some View {
-        RoundedRectangle(cornerRadius: 2)
-            .fill(Color.blue)
-            .frame(width: 4, height: 100)
-            .gesture(
-                DragGesture()
-                    .onChanged { value in
-                        let newPosition = position.wrappedValue + Double(value.translation.width / 200)
-                        position.wrappedValue = max(0, min(duration, newPosition))
-                    }
-            )
     }
     
     private func timeString(from time: TimeInterval) -> String {
         let minutes = Int(time) / 60
         let seconds = Int(time) % 60
-        return String(format: "%d:%02d", minutes, seconds)
+        return String(format: "%02d:%02d", minutes, seconds)
     }
     
-    private func playPause() {
+    private func togglePlayback() {
         if isPlaying {
-            stopPlayback()
+            audioPlayer?.pause()
         } else {
-            startPlayback()
+            if audioPlayer == nil {
+                audioPlayer = try? AVAudioPlayer(contentsOf: recording.url)
+                audioPlayer?.currentTime = currentTime
+            }
+            audioPlayer?.play()
         }
+        isPlaying = !isPlaying
     }
     
-    private func startPlayback() {
-        guard let player = audioPlayer else { return }
-        player.currentTime = startTime
-        player.play()
-        isPlaying = true
-        
-        // Start timer to update currentTime
-        Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { timer in
-            if player.currentTime >= endTime {
-                stopPlayback()
-                timer.invalidate()
-            } else {
-                currentTime = player.currentTime
+    private func skipForward() {
+        currentTime = min(duration, currentTime + 5)
+        audioPlayer?.currentTime = currentTime
+    }
+    
+    private func skipBackward() {
+        currentTime = max(0, currentTime - 5)
+        audioPlayer?.currentTime = currentTime
+    }
+    
+    private func saveEdit() {
+        // Implement audio trimming/editing logic
+    }
+}
+
+struct TimelineView: View {
+    let duration: TimeInterval
+    
+    var body: some View {
+        GeometryReader { geometry in
+            let width = geometry.size.width
+            let markCount = Int(duration / 5) + 1
+            
+            ForEach(0..<markCount, id: \.self) { index in
+                let x = width * CGFloat(index) / CGFloat(markCount - 1)
+                VStack(spacing: 2) {
+                    Text("\(index * 5)")
+                        .font(.caption2)
+                    Rectangle()
+                        .frame(width: 1, height: 8)
+                }
+                .position(x: x, y: 15)
             }
         }
     }
+}
+
+struct SelectionOverlay: View {
+    @Binding var startTime: TimeInterval
+    @Binding var endTime: TimeInterval
+    @Binding var currentTime: TimeInterval
+    let duration: TimeInterval
     
-    private func stopPlayback() {
-        audioPlayer?.stop()
-        isPlaying = false
-        currentTime = startTime
+    var body: some View {
+        GeometryReader { geometry in
+            let width = geometry.size.width
+            
+            // Selection region
+            Rectangle()
+                .fill(Color.blue.opacity(0.2))
+                .frame(width: width * CGFloat((endTime - startTime) / duration))
+                .offset(x: width * CGFloat(startTime / duration))
+            
+            // Playhead
+            Rectangle()
+                .fill(Color.red)
+                .frame(width: 2)
+                .offset(x: width * CGFloat(currentTime / duration))
+        }
+    }
+}
+
+struct EditToolButton: View {
+    let tool: AudioTrimView.EditTool
+    @Binding var selectedTool: AudioTrimView.EditTool
+    
+    var body: some View {
+        Button(action: { selectedTool = tool }) {
+            VStack {
+                Image(systemName: iconName)
+                    .font(.title2)
+                Text(toolName)
+                    .font(.caption)
+            }
+        }
+        .foregroundColor(selectedTool == tool ? .blue : .primary)
     }
     
-    private func trim() {
-        // Implement audio trimming logic
-        // This will involve:
-        // 1. Creating a new audio file
-        // 2. Copying the selected portion
-        // 3. Saving the trimmed file
-        print("Trimming from \(startTime) to \(endTime)")
+    private var iconName: String {
+        switch tool {
+        case .trim: return "scissors"
+        case .removeMid: return "minus.rectangle"
+        case .duplicate: return "plus.rectangle.on.rectangle"
+        }
+    }
+    
+    private var toolName: String {
+        switch tool {
+        case .trim: return "Trim"
+        case .removeMid: return "Remove Middle"
+        case .duplicate: return "Duplicate"
+        }
     }
 } 

@@ -10,10 +10,12 @@ import AVFoundation
 
 struct ContentView: View {
     @StateObject private var recordingManager = RecordingManager()
+    @StateObject private var playlistManager = PlaylistManager()
     @StateObject private var visualizerViewModel = AudioVisualizerViewModel()
     @StateObject private var viewModel: AudioRecorderViewModel
-    @State private var showingRecordings = false
     @State private var showingSettings = false
+    @State private var selectedVisualizerStyle = 2 // Default to waveform style
+    @State private var showingRecordingsList = false
     
     init() {
         let manager = RecordingManager()
@@ -24,68 +26,99 @@ struct ContentView: View {
             recordingManager: manager,
             visualizerViewModel: visualizer
         ))
+        _playlistManager = StateObject(wrappedValue: PlaylistManager())
     }
     
     var body: some View {
         NavigationView {
-            VStack(spacing: 20) {
-                if !recordingManager.permissionGranted {
-                    VStack(spacing: 20) {
-                        Text("Microphone Access Required")
+            ZStack {
+                // Background
+                Color(red: 0.1, green: 0.1, blue: 0.2)
+                    .ignoresSafeArea()
+                
+                VStack {
+                    // Top toolbar
+                    HStack {
+                        Button(action: { showingRecordingsList = true }) {
+                            Image(systemName: "list.bullet")
+                                .font(.title2)
+                        }
+                        Spacer()
+                        Text("Audio Recorder")
                             .font(.headline)
-                        Text("Current Status: \(recordingManager.permissionStatus)")
-                            .foregroundColor(.secondary)
-                        
-                        Button("Request Microphone Access") {
-                            recordingManager.requestMicrophoneAccess { granted in
-                                print("Permission request completed: \(granted)")
-                            }
+                        Spacer()
+                        Button(action: { showingSettings = true }) {
+                            Image(systemName: "gear")
+                                .font(.title2)
                         }
-                        .buttonStyle(.borderedProminent)
-                        
-                        #if os(macOS)
-                        Button("Open System Settings") {
-                            if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone") {
-                                NSWorkspace.shared.open(url)
-                            }
-                        }
-                        #endif
                     }
+                    .foregroundColor(.white)
                     .padding()
-                } else {
-                    // Visualization
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 15)
-                            .fill(Color.gray.opacity(0.2))
+                    
+                    // Visualizer card
+                    VStack {
+                        AudioVisualizerView(viewModel: visualizerViewModel, isRecording: viewModel.isRecording)
                             .frame(height: 200)
+                            .padding()
+                            .background(
+                                RoundedRectangle(cornerRadius: 20)
+                                    .fill(Color(red: 0.15, green: 0.15, blue: 0.25))
+                            )
                         
-                        AudioVisualizerView(
-                            viewModel: visualizerViewModel,
-                            isRecording: viewModel.isRecording
-                        )
+                        // Visualizer style selector
+                        HStack(spacing: 20) {
+                            ForEach(0..<4) { index in
+                                Button(action: { selectedVisualizerStyle = index }) {
+                                    Image(systemName: visualizerIcon(for: index))
+                                        .font(.title2)
+                                        .foregroundColor(selectedVisualizerStyle == index ? .blue : .gray)
+                                        .padding(10)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 12)
+                                                .fill(selectedVisualizerStyle == index ? 
+                                                    Color.blue.opacity(0.2) : Color(red: 0.15, green: 0.15, blue: 0.25))
+                                        )
+                                }
+                            }
+                        }
+                        .padding(.top, 10)
                     }
                     .padding()
                     
                     // Recording info
-                    HStack(spacing: 40) {
-                        VStack {
-                            Text(String(format: "%02d:%02d", Int(viewModel.recordingTime) / 60, Int(viewModel.recordingTime) % 60))
-                                .font(.system(.title2, design: .monospaced))
+                    HStack(spacing: 30) {
+                        VStack(alignment: .leading) {
+                            Text(timeString(from: viewModel.recordingTime))
+                                .font(.system(.title, design: .monospaced))
                             Text(viewModel.fileSize)
                                 .font(.caption)
-                                .foregroundColor(.secondary)
                         }
                         
-                        VStack {
+                        VStack(alignment: .leading) {
                             Text("Stereo")
-                            Text(viewModel.sampleRate)
+                            Text("44.1 kHz")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
                         }
                     }
+                    .foregroundColor(.white)
+                    .padding()
                     
-                    // Controls
+                    Text("Storage Remaining: 7.47GB")
+                        .foregroundColor(.gray)
+                        .font(.caption)
+                    
+                    Spacer()
+                    
+                    // Recording controls
                     HStack(spacing: 40) {
+                        Button(action: {}) {
+                            Image(systemName: "play.fill")
+                                .font(.title)
+                                .foregroundColor(.white)
+                                .frame(width: 60, height: 60)
+                                .background(Circle().fill(Color(red: 0.15, green: 0.15, blue: 0.25)))
+                        }
+                        
                         Button(action: {
                             if viewModel.isRecording {
                                 viewModel.stopRecording()
@@ -93,58 +126,58 @@ struct ContentView: View {
                                 viewModel.startRecording()
                             }
                         }) {
-                            Image(systemName: viewModel.isRecording ? "stop.fill" : "record.circle")
-                                .font(.system(size: 44))
-                                .foregroundColor(viewModel.isRecording ? .red : .blue)
-                                .frame(width: 60, height: 60)
+                            Circle()
+                                .fill(Color.red)
+                                .frame(width: 70, height: 70)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: viewModel.isRecording ? 4 : 35)
+                                        .fill(Color.red)
+                                        .frame(width: viewModel.isRecording ? 20 : 70,
+                                               height: viewModel.isRecording ? 20 : 70)
+                                )
                         }
                         
                         Button(action: {
-                            viewModel.pauseRecording()
+                            if viewModel.isRecording {
+                                viewModel.pauseRecording()
+                            }
                         }) {
                             Image(systemName: viewModel.isPaused ? "play.fill" : "pause.fill")
-                                .font(.system(size: 32))
-                                .foregroundColor(.blue)
+                                .font(.title)
+                                .foregroundColor(.white)
                                 .frame(width: 60, height: 60)
+                                .background(Circle().fill(Color(red: 0.15, green: 0.15, blue: 0.25)))
                         }
+                        .disabled(!viewModel.isRecording)
                     }
-                    
-                    Spacer()
+                    .padding(.bottom, 50)
                 }
-            }
-            .navigationTitle("Audio Recorder")
-            .toolbar {
-                #if os(iOS)
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: { showingSettings = true }) {
-                        Image(systemName: "gear")
-                    }
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { showingRecordings = true }) {
-                        Image(systemName: "list.bullet")
-                    }
-                }
-                #else
-                ToolbarItem {
-                    Button(action: { showingSettings = true }) {
-                        Image(systemName: "gear")
-                    }
-                }
-                ToolbarItem {
-                    Button(action: { showingRecordings = true }) {
-                        Image(systemName: "list.bullet")
-                    }
-                }
-                #endif
-            }
-            .sheet(isPresented: $showingRecordings) {
-                RecordingsListView(recordingManager: recordingManager)
-            }
-            .sheet(isPresented: $showingSettings) {
-                RecordingSettingsView(viewModel: viewModel)
             }
         }
+        .sheet(isPresented: $showingSettings) {
+            RecordingSettingsView(viewModel: viewModel)
+        }
+        .sheet(isPresented: $showingRecordingsList) {
+            NavigationView {
+                RecordingsListView(recordingManager: recordingManager, playlistManager: playlistManager)
+            }
+        }
+    }
+    
+    private func visualizerIcon(for index: Int) -> String {
+        switch index {
+        case 0: return "waveform.path.ecg"
+        case 1: return "chart.bar.fill"
+        case 2: return "waveform"
+        case 3: return "chart.xyaxis.line"
+        default: return "waveform"
+        }
+    }
+    
+    private func timeString(from timeInterval: TimeInterval) -> String {
+        let minutes = Int(timeInterval) / 60
+        let seconds = Int(timeInterval) % 60
+        return String(format: "%02d:%02d", minutes, seconds)
     }
 }
 
