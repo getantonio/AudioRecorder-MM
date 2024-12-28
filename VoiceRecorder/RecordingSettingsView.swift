@@ -1,21 +1,25 @@
 import SwiftUI
 
-struct AudioRecordingSettingsView: View {
+struct RecordingSettingsView: View {
     @ObservedObject var viewModel: AudioRecorderViewModel
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.dismiss) var dismiss
     
     var body: some View {
         NavigationView {
             Form {
-                Section("Visualization") {
-                    Picker("Waveform Style", selection: $viewModel.visualizerViewModel.waveformStyle) {
-                        Text("Bars").tag(WaveformStyle.bars)
-                        Text("Line").tag(WaveformStyle.line)
-                        Text("Mirror").tag(WaveformStyle.mirror)
+                Section(header: Text("Recording quality")) {
+                    Picker("Channel", selection: .constant("Stereo")) {
+                        Text("Mono").tag("Mono")
+                        Text("Stereo").tag("Stereo")
+                    }
+                    
+                    Picker("Sample Rate", selection: .constant("44.1 kHz")) {
+                        Text("16 kHz").tag("16 kHz")
+                        Text("24 kHz").tag("24 kHz")
+                        Text("44.1 kHz").tag("44.1 kHz")
+                        Text("48 kHz").tag("48 kHz")
                     }
                 }
-                
-                // Add other settings here
             }
             .navigationTitle("Settings")
             .toolbar {
@@ -38,9 +42,9 @@ struct AudioRecordingSettingsView: View {
 }
 
 #if DEBUG
-struct AudioRecordingSettingsView_Previews: PreviewProvider {
+struct RecordingSettingsView_Previews: PreviewProvider {
     static var previews: some View {
-        AudioRecordingSettingsView(viewModel: AudioRecorderViewModel(
+        RecordingSettingsView(viewModel: AudioRecorderViewModel(
             recordingManager: RecordingManager(),
             visualizerViewModel: AudioVisualizerViewModel()
         ))

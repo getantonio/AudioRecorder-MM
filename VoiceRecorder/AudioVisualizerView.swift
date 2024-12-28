@@ -41,78 +41,105 @@ class AudioVisualizerViewModel: ObservableObject {
 
 struct AudioVisualizerView: View {
     @ObservedObject var viewModel: AudioVisualizerViewModel
-    var isRecording: Bool
+    let isRecording: Bool
     
     var body: some View {
-        Group {
+        GeometryReader { geometry in
             switch viewModel.waveformStyle {
             case .bars:
-                barsWaveform
-            case .line:
-                lineWaveform
-            case .mirror:
-                mirrorWaveform
-            }
-        }
-        .animation(viewModel.waveformStyle.animation, value: viewModel.amplitudes)
-    }
-    
-    private var barsWaveform: some View {
-        HStack(alignment: .center, spacing: 2) {
-            ForEach(viewModel.amplitudes.indices, id: \.self) { index in
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(Color.blue.opacity(0.8))
-                    .frame(width: 3, height: viewModel.amplitudes[index] * 100)
-            }
-        }
-    }
-    
-    private var lineWaveform: some View {
-        GeometryReader { geometry in
-            Path { path in
-                let width = geometry.size.width
-                let height = geometry.size.height
-                let step = width / CGFloat(viewModel.amplitudes.count - 1)
-                
-                path.move(to: CGPoint(x: 0, y: height / 2))
-                
-                for (index, amplitude) in viewModel.amplitudes.enumerated() {
-                    let x = CGFloat(index) * step
-                    let y = height / 2 - (amplitude * height / 2)
-                    
-                    if index == 0 {
-                        path.move(to: CGPoint(x: x, y: y))
-                    } else {
-                        path.addLine(to: CGPoint(x: x, y: y))
+                // Classic bar visualization
+                HStack(spacing: 4) {
+                    ForEach(0..<Int(geometry.size.width / 6), id: \.self) { index in
+                        let amplitude = viewModel.amplitudes[safe: index] ?? 0
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(barGradient)
+                            .frame(width: 4, height: max(3, geometry.size.height * CGFloat(amplitude)))
+                            .animation(WaveformStyle.bars.animation, value: amplitude)
                     }
                 }
+                .frame(maxHeight: .infinity)
+                
+            case .blocks:
+                // Stacked blocks visualization
+                HStack(spacing: 4) {
+                    ForEach(0..<Int(geometry.size.width / 12), id: \.self) { index in
+                        let amplitude = viewModel.amplitudes[safe: index] ?? 0
+                        VStack(spacing: 2) {
+                            ForEach(0..<Int(amplitude * 10), id: \.self) { _ in
+                                RoundedRectangle(cornerRadius: 1)
+                                    .fill(barGradient)
+                                    .frame(width: 8, height: 4)
+                            }
+                        }
+                        .animation(WaveformStyle.blocks.animation, value: amplitude)
+                    }
+                }
+                .frame(maxHeight: .infinity, alignment: .bottom)
+                
+            case .circle:
+                // Circular visualization
+                ZStack {
+                    ForEach(0..<viewModel.amplitudes.count, id: \.self) { index in
+                        let amplitude = viewModel.amplitudes[safe: index] ?? 0
+                        let angle = Double(index) * (360.0 / Double(viewModel.amplitudes.count))
+                        let length = geometry.size.height * 0.3 * CGFloat(amplitude)
+                        
+                        Rectangle()
+                            .fill(barGradient)
+                            .frame(width: 2, height: length)
+                            .rotationEffect(.degrees(angle))
+                            .animation(WaveformStyle.circle.animation, value: amplitude)
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                
+            case .spectrum:
+                // Spectrum analyzer style
+                HStack(spacing: 2) {
+                    ForEach(0..<Int(geometry.size.width / 4), id: \.self) { index in
+                        let amplitude = viewModel.amplitudes[safe: index] ?? 0
+                        VStack(spacing: 1) {
+                            ForEach(0..<15, id: \.self) { level in
+                                let isLit = CGFloat(level) / 15.0 <= amplitude
+                                RoundedRectangle(cornerRadius: 1)
+                                    .fill(isLit ? spectrumColor(for: level) : Color.gray.opacity(0.3))
+                                    .frame(width: 3, height: 3)
+                            }
+                        }
+                        .animation(WaveformStyle.spectrum.animation, value: amplitude)
+                    }
+                }
+                .frame(maxHeight: .infinity)
             }
-            .stroke(Color.blue, lineWidth: 2)
         }
     }
     
-    private var mirrorWaveform: some View {
-        GeometryReader { geometry in
-            Path { path in
-                let width = geometry.size.width
-                let height = geometry.size.height
-                let step = width / CGFloat(viewModel.amplitudes.count - 1)
-                
-                for (index, amplitude) in viewModel.amplitudes.enumerated() {
-                    let x = CGFloat(index) * step
-                    let halfHeight = height / 2
-                    let amplitudeHeight = amplitude * halfHeight
-                    
-                    // Top wave
-                    path.move(to: CGPoint(x: x, y: halfHeight - amplitudeHeight))
-                    path.addLine(to: CGPoint(x: x, y: halfHeight))
-                    
-                    // Bottom wave (mirrored)
-                    path.move(to: CGPoint(x: x, y: halfHeight))
-                    path.addLine(to: CGPoint(x: x, y: halfHeight + amplitudeHeight))
-                }
-            }
-            .stroke(Color.blue, lineWidth: 2)
+    private var barGradient: LinearGradient {
+        LinearGradient(
+            gradient: Gradient(colors: [
+                Color.blue,
+                Color.blue.opacity(0.8),
+                Color(red: 0.3, green: 0.7, blue: 1.0)
+            ]),
+            startPoint: .bottom,
+            endPoint: .top
+        )
+    }
+    
+    private func spectrumColor(for level: Int) -> Color {
+        let progress = Double(level) / 14.0
+        if progress < 0.4 {
+            return .green
+        } else if progress < 0.7 {
+            return .yellow
+        } else {
+            return .red
         }
+    }
+}
+
+extension Collection {
+    subscript(safe index: Index) -> Element? {
+        indices.contains(index) ? self[index] : nil
     }
 } 

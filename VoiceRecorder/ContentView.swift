@@ -67,18 +67,23 @@ struct ContentView: View {
                         
                         // Visualizer style selector
                         HStack(spacing: 20) {
-                            ForEach(0..<4) { index in
-                                Button(action: { selectedVisualizerStyle = index }) {
-                                    Image(systemName: visualizerIcon(for: index))
+                            ForEach(WaveformStyle.allCases, id: \.self) { style in
+                                Button(action: { 
+                                    visualizerViewModel.waveformStyle = style
+                                }) {
+                                    Image(systemName: visualizerIcon(for: style))
                                         .font(.title2)
-                                        .foregroundColor(selectedVisualizerStyle == index ? .blue : .gray)
+                                        .foregroundColor(visualizerViewModel.waveformStyle == style ? .blue : .gray)
                                         .padding(10)
                                         .background(
                                             RoundedRectangle(cornerRadius: 12)
-                                                .fill(selectedVisualizerStyle == index ? 
+                                                .fill(visualizerViewModel.waveformStyle == style ? 
                                                     Color.blue.opacity(0.2) : Color(red: 0.15, green: 0.15, blue: 0.25))
+                                                .shadow(radius: 0)
                                         )
+                                        .contentShape(Rectangle())
                                 }
+                                .buttonStyle(PlainButtonStyle())
                             }
                         }
                         .padding(.top, 10)
@@ -110,15 +115,8 @@ struct ContentView: View {
                     Spacer()
                     
                     // Recording controls
-                    HStack(spacing: 40) {
-                        Button(action: {}) {
-                            Image(systemName: "play.fill")
-                                .font(.title)
-                                .foregroundColor(.white)
-                                .frame(width: 60, height: 60)
-                                .background(Circle().fill(Color(red: 0.15, green: 0.15, blue: 0.25)))
-                        }
-                        
+                    HStack {
+                        Spacer()
                         Button(action: {
                             if viewModel.isRecording {
                                 viewModel.stopRecording()
@@ -126,29 +124,25 @@ struct ContentView: View {
                                 viewModel.startRecording()
                             }
                         }) {
-                            Circle()
-                                .fill(Color.red)
-                                .frame(width: 70, height: 70)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: viewModel.isRecording ? 4 : 35)
-                                        .fill(Color.red)
-                                        .frame(width: viewModel.isRecording ? 20 : 70,
-                                               height: viewModel.isRecording ? 20 : 70)
-                                )
-                        }
-                        
-                        Button(action: {
-                            if viewModel.isRecording {
-                                viewModel.pauseRecording()
+                            ZStack {
+                                Circle()
+                                    .fill(Color.red)
+                                    .frame(width: 70, height: 70)
+                                
+                                if viewModel.isRecording {
+                                    RoundedRectangle(cornerRadius: 4)
+                                        .fill(Color.white)
+                                        .frame(width: 20, height: 20)
+                                } else {
+                                    Circle()
+                                        .fill(Color.white)
+                                        .frame(width: 30, height: 30)
+                                }
                             }
-                        }) {
-                            Image(systemName: viewModel.isPaused ? "play.fill" : "pause.fill")
-                                .font(.title)
-                                .foregroundColor(.white)
-                                .frame(width: 60, height: 60)
-                                .background(Circle().fill(Color(red: 0.15, green: 0.15, blue: 0.25)))
+                            .shadow(radius: 0)
                         }
-                        .disabled(!viewModel.isRecording)
+                        .buttonStyle(PlainButtonStyle())
+                        Spacer()
                     }
                     .padding(.bottom, 50)
                 }
@@ -164,13 +158,12 @@ struct ContentView: View {
         }
     }
     
-    private func visualizerIcon(for index: Int) -> String {
-        switch index {
-        case 0: return "waveform.path.ecg"
-        case 1: return "chart.bar.fill"
-        case 2: return "waveform"
-        case 3: return "chart.xyaxis.line"
-        default: return "waveform"
+    private func visualizerIcon(for style: WaveformStyle) -> String {
+        switch style {
+        case .bars: return "waveform.path.ecg"
+        case .blocks: return "square.grid.3x3.fill"
+        case .circle: return "rays"
+        case .spectrum: return "chart.bar.xaxis"
         }
     }
     
@@ -178,47 +171,6 @@ struct ContentView: View {
         let minutes = Int(timeInterval) / 60
         let seconds = Int(timeInterval) % 60
         return String(format: "%02d:%02d", minutes, seconds)
-    }
-}
-
-struct RecordingSettingsView: View {
-    @ObservedObject var viewModel: AudioRecorderViewModel
-    @Environment(\.dismiss) var dismiss
-    
-    var body: some View {
-        NavigationView {
-            Form {
-                Section(header: Text("Recording quality")) {
-                    Picker("Channel", selection: .constant("Stereo")) {
-                        Text("Mono").tag("Mono")
-                        Text("Stereo").tag("Stereo")
-                    }
-                    
-                    Picker("Sample Rate", selection: .constant("44.1 kHz")) {
-                        Text("16 kHz").tag("16 kHz")
-                        Text("24 kHz").tag("24 kHz")
-                        Text("44.1 kHz").tag("44.1 kHz")
-                        Text("48 kHz").tag("48 kHz")
-                    }
-                }
-            }
-            .navigationTitle("Settings")
-            .toolbar {
-                #if os(iOS)
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        dismiss()
-                    }
-                }
-                #else
-                ToolbarItem {
-                    Button("Done") {
-                        dismiss()
-                    }
-                }
-                #endif
-            }
-        }
     }
 }
 
