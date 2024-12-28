@@ -60,12 +60,12 @@ struct AudioVisualizerView: View {
                 .frame(maxHeight: .infinity)
                 
             case .blocks:
-                // Stacked blocks visualization
+                // Enhanced blocks visualization
                 HStack(spacing: 4) {
                     ForEach(0..<Int(geometry.size.width / 12), id: \.self) { index in
-                        let amplitude = viewModel.amplitudes[safe: index] ?? 0
+                        let amplitude = (viewModel.amplitudes[safe: index] ?? 0) * 1.5 // Amplified
                         VStack(spacing: 2) {
-                            ForEach(0..<Int(amplitude * 10), id: \.self) { _ in
+                            ForEach(0..<Int(amplitude * 12), id: \.self) { _ in
                                 RoundedRectangle(cornerRadius: 1)
                                     .fill(barGradient)
                                     .frame(width: 8, height: 4)
@@ -76,33 +76,42 @@ struct AudioVisualizerView: View {
                 }
                 .frame(maxHeight: .infinity, alignment: .bottom)
                 
-            case .circle:
-                // Circular visualization
-                ZStack {
-                    ForEach(0..<viewModel.amplitudes.count, id: \.self) { index in
-                        let amplitude = viewModel.amplitudes[safe: index] ?? 0
-                        let angle = Double(index) * (360.0 / Double(viewModel.amplitudes.count))
-                        let length = geometry.size.height * 0.3 * CGFloat(amplitude)
+            case .wave:
+                // New wave visualization (replacing circle)
+                GeometryReader { geo in
+                    Path { path in
+                        let width = geo.size.width
+                        let height = geo.size.height
+                        let midHeight = height / 2
                         
-                        Rectangle()
-                            .fill(barGradient)
-                            .frame(width: 2, height: length)
-                            .rotationEffect(.degrees(angle))
-                            .animation(WaveformStyle.circle.animation, value: amplitude)
+                        path.move(to: CGPoint(x: 0, y: midHeight))
+                        
+                        for i in 0..<viewModel.amplitudes.count {
+                            let x = width * CGFloat(i) / CGFloat(viewModel.amplitudes.count)
+                            let amplitude = (viewModel.amplitudes[safe: i] ?? 0) * 1.5 // Amplified
+                            let y = midHeight + sin(Double(i) * 0.3) * height * 0.3 * amplitude
+                            
+                            if i == 0 {
+                                path.move(to: CGPoint(x: x, y: y))
+                            } else {
+                                path.addLine(to: CGPoint(x: x, y: y))
+                            }
+                        }
                     }
+                    .stroke(barGradient, lineWidth: 3)
+                    .animation(WaveformStyle.wave.animation, value: viewModel.amplitudes)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 
             case .spectrum:
-                // Spectrum analyzer style
+                // Inverted spectrum analyzer
                 HStack(spacing: 2) {
                     ForEach(0..<Int(geometry.size.width / 4), id: \.self) { index in
                         let amplitude = viewModel.amplitudes[safe: index] ?? 0
                         VStack(spacing: 1) {
-                            ForEach(0..<15, id: \.self) { level in
+                            ForEach((0..<15).reversed(), id: \.self) { level in
                                 let isLit = CGFloat(level) / 15.0 <= amplitude
                                 RoundedRectangle(cornerRadius: 1)
-                                    .fill(isLit ? spectrumColor(for: level) : Color.gray.opacity(0.3))
+                                    .fill(isLit ? spectrumColor(for: 14 - level) : Color.gray.opacity(0.3))
                                     .frame(width: 3, height: 3)
                             }
                         }
@@ -112,6 +121,9 @@ struct AudioVisualizerView: View {
                 .frame(maxHeight: .infinity)
             }
         }
+        .padding()
+        .background(Color(red: 0.15, green: 0.15, blue: 0.25))
+        .clipShape(RoundedRectangle(cornerRadius: 20))
     }
     
     private var barGradient: LinearGradient {

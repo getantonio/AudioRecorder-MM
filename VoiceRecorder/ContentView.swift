@@ -117,6 +117,25 @@ struct ContentView: View {
                     // Recording controls
                     HStack {
                         Spacer()
+                        
+                        // Pause button (smaller and to the left)
+                        Button(action: viewModel.pauseRecording) {
+                            Circle()
+                                .fill(Color(red: 0.15, green: 0.15, blue: 0.25))
+                                .frame(width: 40, height: 40)  // 50% smaller
+                                .overlay(
+                                    Image(systemName: viewModel.isPaused ? "play.fill" : "pause.fill")
+                                        .font(.system(size: 16))  // Smaller icon
+                                        .foregroundColor(.white)
+                                )
+                                .shadow(color: .black.opacity(0.2), radius: 2, y: 2)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        .disabled(!viewModel.isRecording)
+                        .opacity(viewModel.isRecording ? 1 : 0.5)
+                        .offset(x: 40)  // Move closer to record button
+                        
+                        // Record button (centered)
                         Button(action: {
                             if viewModel.isRecording {
                                 viewModel.stopRecording()
@@ -127,21 +146,24 @@ struct ContentView: View {
                             ZStack {
                                 Circle()
                                     .fill(Color.red)
-                                    .frame(width: 70, height: 70)
+                                    .frame(width: 80, height: 80)
+                                    .shadow(color: viewModel.isRecording ? Color.red.opacity(0.5) : .clear,
+                                            radius: viewModel.isRecording ? 10 : 0)
                                 
                                 if viewModel.isRecording {
                                     RoundedRectangle(cornerRadius: 4)
                                         .fill(Color.white)
-                                        .frame(width: 20, height: 20)
+                                        .frame(width: 28, height: 28)
                                 } else {
                                     Circle()
                                         .fill(Color.white)
-                                        .frame(width: 30, height: 30)
+                                        .frame(width: 60, height: 60)
+                                        .shadow(color: .black.opacity(0.2), radius: 2, y: 2)
                                 }
                             }
-                            .shadow(radius: 0)
                         }
                         .buttonStyle(PlainButtonStyle())
+                        
                         Spacer()
                     }
                     .padding(.bottom, 50)
@@ -162,7 +184,7 @@ struct ContentView: View {
         switch style {
         case .bars: return "waveform.path.ecg"
         case .blocks: return "square.grid.3x3.fill"
-        case .circle: return "rays"
+        case .wave: return "waveform"
         case .spectrum: return "chart.bar.xaxis"
         }
     }
