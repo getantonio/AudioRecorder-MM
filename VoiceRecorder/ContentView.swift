@@ -119,7 +119,7 @@ struct ContentView: View {
                         Spacer(minLength: 50)
                         
                         ZStack {
-                            // Record button (centered)
+                            // Record button (centered) - 30% smaller
                             Button(action: {
                                 if viewModel.isRecording {
                                     viewModel.stopRecording()
@@ -128,23 +128,23 @@ struct ContentView: View {
                                 }
                             }) {
                                 ZStack {
-                                    // Background circle
+                                    // Background circle - reduced size by 30%
                                     Circle()
-                                        .fill(Color(red: 1.0, green: 0.7, blue: 0.7))  // Light pink background
-                                        .frame(width: 80, height: 80)
+                                        .fill(Color(red: 1.0, green: 0.7, blue: 0.7))
+                                        .frame(width: 56, height: 56) // Reduced from 80 to 56 (30% smaller)
                                     
-                                    // Simple microphone icon
+                                    // Simple microphone icon - reduced size by 30%
                                     Image(systemName: "mic.fill")
                                         .resizable()
                                         .aspectRatio(contentMode: .fit)
-                                        .frame(width: 40, height: 40)
+                                        .frame(width: 28, height: 28) // Reduced from 40 to 28 (30% smaller)
                                         .foregroundColor(.red)
                                     
-                                    // Recording indicator ring
+                                    // Recording indicator ring - reduced size by 30%
                                     if viewModel.isRecording {
                                         Circle()
-                                            .stroke(Color.white.opacity(0.5), lineWidth: 3)
-                                            .frame(width: 90, height: 90)
+                                            .stroke(Color.white.opacity(0.5), lineWidth: 2) // Reduced stroke width
+                                            .frame(width: 63, height: 63) // Reduced from 90 to 63 (30% smaller)
                                             .scaleEffect(viewModel.isRecording ? 1.1 : 1.0)
                                             .opacity(viewModel.isRecording ? 1 : 0)
                                             .animation(.easeInOut(duration: 1).repeatForever(autoreverses: true), value: viewModel.isRecording)
@@ -153,7 +153,7 @@ struct ContentView: View {
                             }
                             .buttonStyle(PlainButtonStyle())
                             
-                            // Pause button (positioned to the right and down)
+                            // Pause button - reduced size and adjusted position
                             Button(action: viewModel.pauseRecording) {
                                 Circle()
                                     .fill(
@@ -166,10 +166,10 @@ struct ContentView: View {
                                             endPoint: .bottomTrailing
                                         )
                                     )
-                                    .frame(width: 40, height: 40)
+                                    .frame(width: 28, height: 28) // Reduced from 40 to 28 (30% smaller)
                                     .overlay(
                                         Image(systemName: viewModel.isPaused ? "play.fill" : "pause.fill")
-                                            .font(.system(size: 16))
+                                            .font(.system(size: 11)) // Reduced from 16 to 11
                                             .foregroundColor(.white)
                                     )
                                     .shadow(color: .black.opacity(0.2), radius: 2)
@@ -177,7 +177,7 @@ struct ContentView: View {
                             .buttonStyle(PlainButtonStyle())
                             .disabled(!viewModel.isRecording)
                             .opacity(viewModel.isRecording ? 1 : 0.5)
-                            .offset(x: 75, y: 40) // 75px right (55 + 20) and 40px down
+                            .offset(x: 52, y: 28) // Reduced offset from (75, 40) to (52, 28)
                         }
                         
                         Spacer(minLength: 50)

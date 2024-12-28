@@ -1,26 +1,24 @@
 import Foundation
 
 struct Recording: Identifiable, Codable {
-    private(set) var id: UUID
+    let id: UUID
     let url: URL
     let date: Date
-    var playlistIds: Set<UUID> = []
     
-    init(url: URL) {
-        self.id = UUID()
+    var name: String {
+        url.lastPathComponent
+    }
+    
+    var formattedDate: String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
+    }
+    
+    init(id: UUID = UUID(), url: URL, date: Date = Date()) {
+        self.id = id
         self.url = url
-        self.date = (try? url.resourceValues(forKeys: [.creationDateKey]))?.creationDate ?? Date()
-    }
-    
-    enum CodingKeys: String, CodingKey {
-        case id, url, date, playlistIds
-    }
-    
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.id = try container.decode(UUID.self, forKey: .id)
-        self.url = try container.decode(URL.self, forKey: .url)
-        self.date = try container.decode(Date.self, forKey: .date)
-        self.playlistIds = try container.decode(Set<UUID>.self, forKey: .playlistIds)
+        self.date = date
     }
 } 

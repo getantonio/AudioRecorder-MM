@@ -2,8 +2,8 @@ import SwiftUI
 import AVFoundation
 
 struct PlaylistDetailView: View {
-    @ObservedObject var playlist: Playlist
-    @ObservedObject var playlistManager: PlaylistManager
+    let playlist: Playlist
+    let playlistManager: PlaylistManager
     @State private var currentlyPlaying: Recording?
     @State private var audioPlayer: AVAudioPlayer?
     @State private var showingDeleteAlert = false
@@ -21,19 +21,11 @@ struct PlaylistDetailView: View {
                             togglePlayback(for: recording)
                         }) {
                             Image(systemName: currentlyPlaying?.id == recording.id ? "pause.circle.fill" : "play.circle.fill")
-                                .font(.title)
+                                .font(.title2)
                                 .foregroundColor(.blue)
                         }
                         
-                        VStack(alignment: .leading) {
-                            Text(recording.url.lastPathComponent)
-                                .font(.headline)
-                            Text(recording.date, style: .date)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                        
-                        Spacer()
+                        RecordingRow(recording: recording)
                         
                         Button(action: {
                             recordingToDelete = recording
@@ -47,8 +39,14 @@ struct PlaylistDetailView: View {
             }
         }
         .navigationTitle(playlist.name)
-        .onDisappear {
-            stopPlayback()
+        .toolbar {
+            ToolbarItem {
+                Button(action: {
+                    // Add recordings to playlist
+                }) {
+                    Image(systemName: "plus")
+                }
+            }
         }
         .alert("Remove Recording", isPresented: $showingDeleteAlert, presenting: recordingToDelete) { recording in
             Button("Remove", role: .destructive) {
@@ -56,7 +54,10 @@ struct PlaylistDetailView: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: { recording in
-            Text("Are you sure you want to remove '\(recording.url.lastPathComponent)' from this playlist?")
+            Text("Are you sure you want to remove '\(recording.name)' from this playlist?")
+        }
+        .onDisappear {
+            stopPlayback()
         }
     }
     

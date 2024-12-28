@@ -4,85 +4,125 @@ import AVFoundation
 struct RecordingsListView: View {
     @ObservedObject var recordingManager: RecordingManager
     @ObservedObject var playlistManager: PlaylistManager
-    @Environment(\.dismiss) private var dismiss
-    @State private var showingPlaylistPicker = false
+    @State private var showingPlaylistCreation = false
     @State private var selectedRecording: Recording?
+    @State private var showingNewPlaylistSheet = false
+    @State private var newPlaylistName = ""
     
     var body: some View {
         List {
-            ForEach(recordingManager.recordings) { recording in
-                RecordingRow(recording: recording, playlistManager: playlistManager)
+            // Playlists Section
+            Section(header: Text("Playlists")) {
+                ForEach(playlistManager.playlists) { playlist in
+                    NavigationLink {
+                        PlaylistDetailView(
+                            playlist: playlist,
+                            playlistManager: playlistManager
+                        )
+                    } label: {
+                        HStack {
+                            Image(systemName: "music.note.list")
+                                .foregroundColor(.blue)
+                            VStack(alignment: .leading) {
+                                Text(playlist.name)
+                                    .font(.headline)
+                                Text("\(playlist.recordings.count) recordings")
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
+                            }
+                        }
+                    }
+                }
             }
-            .onDelete(perform: deleteRecordings)
+            
+            // Recordings Section
+            Section(header: Text("Recordings")) {
+                ForEach(recordingManager.recordings) { recording in
+                    NavigationLink {
+                        RecordingDetailView(
+                            recording: recording,
+                            playlistManager: playlistManager
+                        )
+                    } label: {
+                        RecordingRow(recording: recording)
+                    }
+                    .contextMenu {
+                        Button("Add to Playlist") {
+                            selectedRecording = recording
+                            showingPlaylistCreation = true
+                        }
+                    }
+                }
+                .onDelete(perform: deleteRecordings)
+            }
         }
-        .navigationTitle("Recordings")
+        .navigationTitle("Recordings & Playlists")
         .toolbar {
             #if os(iOS)
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button("Done") {
-                    dismiss()
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: { showingNewPlaylistSheet = true }) {
+                    Image(systemName: "plus")
                 }
             }
             #else
             ToolbarItem {
-                Button("Done") {
-                    dismiss()
+                Button(action: { showingNewPlaylistSheet = true }) {
+                    Image(systemName: "plus")
                 }
             }
             #endif
         }
+        .sheet(isPresented: $showingNewPlaylistSheet) {
+            NavigationView {
+                Form {
+                    TextField("Playlist Name", text: $newPlaylistName)
+                }
+                .navigationTitle("New Playlist")
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") {
+                            showingNewPlaylistSheet = false
+                        }
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Create") {
+                            if !newPlaylistName.isEmpty {
+                                playlistManager.createPlaylist(name: newPlaylistName)
+                                newPlaylistName = ""
+                                showingNewPlaylistSheet = false
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .sheet(isPresented: $showingPlaylistCreation) {
+            if let recording = selectedRecording {
+                NavigationView {
+                    PlaylistPickerView(recording: recording, playlistManager: playlistManager)
+                }
+            }
+        }
     }
     
     private func deleteRecordings(at offsets: IndexSet) {
-        for index in offsets {
-            let recording = recordingManager.recordings[index]
-            do {
-                try FileManager.default.removeItem(at: recording.url)
-                recordingManager.recordings.remove(at: index)
-            } catch {
-                print("Error deleting recording: \(error)")
-            }
-        }
+        recordingManager.deleteRecordings(at: offsets)
     }
 }
 
 struct RecordingRow: View {
     let recording: Recording
-    @ObservedObject var playlistManager: PlaylistManager
-    @State private var showingPlaylistPicker = false
     
     var body: some View {
-        NavigationLink(destination: RecordingDetailView(recording: recording)) {
+        HStack {
+            Image(systemName: "waveform")
+                .foregroundColor(.blue)
             VStack(alignment: .leading) {
-                Text(recording.url.lastPathComponent)
-                    .font(.headline)
-                Text(recording.date, style: .date)
+                Text(recording.name)
+                Text(recording.formattedDate)
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.gray)
             }
-        }
-        .contextMenu {
-            Button {
-                showingPlaylistPicker = true
-            } label: {
-                Label("Add to Playlist", systemImage: "plus.circle")
-            }
-            
-            Button(role: .destructive) {
-                do {
-                    try FileManager.default.removeItem(at: recording.url)
-                    if let index = playlistManager.playlists.firstIndex(where: { $0.recordings.contains { $0.id == recording.id } }) {
-                        playlistManager.playlists[index].recordings.removeAll { $0.id == recording.id }
-                    }
-                } catch {
-                    print("Error deleting recording: \(error)")
-                }
-            } label: {
-                Label("Delete", systemImage: "trash")
-            }
-        }
-        .sheet(isPresented: $showingPlaylistPicker) {
-            PlaylistPickerView(recording: recording, playlistManager: playlistManager)
         }
     }
 }

@@ -3,6 +3,7 @@ import AVKit
 
 struct RecordingDetailView: View {
     let recording: Recording
+    let playlistManager: PlaylistManager
     @State private var audioPlayer: AVAudioPlayer?
     @State private var isPlaying = false
     @State private var currentTime: TimeInterval = 0

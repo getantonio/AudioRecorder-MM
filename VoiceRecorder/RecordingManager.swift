@@ -281,14 +281,14 @@ class RecordingManager: NSObject, ObservableObject, AVAudioRecorderDelegate {
     }
     
     // Add delete functionality
-    func deleteRecording(at offsets: IndexSet) {
+    func deleteRecordings(at offsets: IndexSet) {
         for index in offsets {
             let recording = recordings[index]
             do {
                 try FileManager.default.removeItem(at: recording.url)
                 recordings.remove(at: index)
             } catch {
-                print("Error deleting recording: \(error.localizedDescription)")
+                print("Error deleting recording: \(error)")
             }
         }
     }
@@ -302,7 +302,12 @@ class RecordingManager: NSObject, ObservableObject, AVAudioRecorderDelegate {
                                                              includingPropertiesForKeys: nil)
             recordings = fileURLs
                 .filter { $0.pathExtension == "m4a" }
-                .map { Recording(url: $0) }
+                .map { url in 
+                    Recording(
+                        url: url,
+                        date: (try? url.resourceValues(forKeys: [.creationDateKey]))?.creationDate ?? Date()
+                    )
+                }
                 .sorted { $0.date > $1.date }
         } catch {
             print("Failed to load recordings: \(error.localizedDescription)")
