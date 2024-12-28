@@ -2,45 +2,40 @@ import SwiftUI
 import AVFoundation
 
 class AudioVisualizerViewModel: ObservableObject {
-    @Published var amplitudes: [CGFloat] = Array(repeating: 0, count: 30)
+    @Published var amplitudes: [CGFloat] = Array(repeating: 0, count: 100)
+    @Published var waveformStyle: WaveformStyle = .bars
     private var timer: Timer?
     
     func startVisualization(for recorder: AVAudioRecorder?) {
         guard let recorder = recorder else { return }
         recorder.isMeteringEnabled = true
         
-        timer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
+        timer = Timer.scheduledTimer(withTimeInterval: 0.03, repeats: true) { [weak self] _ in
             recorder.updateMeters()
             self?.updateAmplitudes(from: recorder)
         }
     }
     
     private func updateAmplitudes(from recorder: AVAudioRecorder) {
-        // Shift existing amplitudes to the left
         amplitudes.removeFirst()
-        
-        // Get the current audio level and normalize it
         let level = recorder.averagePower(forChannel: 0)
         let normalizedValue = normalize(level)
-        
-        // Add new amplitude value
         amplitudes.append(normalizedValue)
     }
     
     private func normalize(_ power: Float) -> CGFloat {
-        // Adjust these values to make the visualization more sensitive
-        let minDb: Float = -60.0  // Increased sensitivity (was -50.0)
+        let minDb: Float = -60.0
         let maxDb: Float = 0.0
         
-        // Apply a non-linear scaling to make small sounds more visible
+        // Enhanced normalization for better visual feedback
         let normalizedValue = pow((power - minDb) / (maxDb - minDb), 2)
-        return CGFloat(max(0.0, min(1.0, normalizedValue))) * 0.8 + 0.2 // Add minimum height
+        return CGFloat(max(0.0, min(1.0, normalizedValue))) * 0.95 + 0.05
     }
     
     func stopVisualization() {
         timer?.invalidate()
         timer = nil
-        amplitudes = Array(repeating: 0, count: 30)
+        amplitudes = Array(repeating: 0, count: 100)
     }
 }
 
@@ -49,13 +44,75 @@ struct AudioVisualizerView: View {
     var isRecording: Bool
     
     var body: some View {
-        HStack(alignment: .center, spacing: 4) {
-            ForEach(0..<viewModel.amplitudes.count, id: \.self) { index in
-                RoundedRectangle(cornerRadius: 3)
-                    .fill(Color.blue.opacity(0.8))
-                    .frame(width: 8, height: viewModel.amplitudes[index] * 100)
-                    .animation(.easeOut(duration: 0.05), value: viewModel.amplitudes[index])
+        Group {
+            switch viewModel.waveformStyle {
+            case .bars:
+                barsWaveform
+            case .line:
+                lineWaveform
+            case .mirror:
+                mirrorWaveform
             }
+        }
+        .animation(viewModel.waveformStyle.animation, value: viewModel.amplitudes)
+    }
+    
+    private var barsWaveform: some View {
+        HStack(alignment: .center, spacing: 2) {
+            ForEach(viewModel.amplitudes.indices, id: \.self) { index in
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(Color.blue.opacity(0.8))
+                    .frame(width: 3, height: viewModel.amplitudes[index] * 100)
+            }
+        }
+    }
+    
+    private var lineWaveform: some View {
+        GeometryReader { geometry in
+            Path { path in
+                let width = geometry.size.width
+                let height = geometry.size.height
+                let step = width / CGFloat(viewModel.amplitudes.count - 1)
+                
+                path.move(to: CGPoint(x: 0, y: height / 2))
+                
+                for (index, amplitude) in viewModel.amplitudes.enumerated() {
+                    let x = CGFloat(index) * step
+                    let y = height / 2 - (amplitude * height / 2)
+                    
+                    if index == 0 {
+                        path.move(to: CGPoint(x: x, y: y))
+                    } else {
+                        path.addLine(to: CGPoint(x: x, y: y))
+                    }
+                }
+            }
+            .stroke(Color.blue, lineWidth: 2)
+        }
+    }
+    
+    private var mirrorWaveform: some View {
+        GeometryReader { geometry in
+            Path { path in
+                let width = geometry.size.width
+                let height = geometry.size.height
+                let step = width / CGFloat(viewModel.amplitudes.count - 1)
+                
+                for (index, amplitude) in viewModel.amplitudes.enumerated() {
+                    let x = CGFloat(index) * step
+                    let halfHeight = height / 2
+                    let amplitudeHeight = amplitude * halfHeight
+                    
+                    // Top wave
+                    path.move(to: CGPoint(x: x, y: halfHeight - amplitudeHeight))
+                    path.addLine(to: CGPoint(x: x, y: halfHeight))
+                    
+                    // Bottom wave (mirrored)
+                    path.move(to: CGPoint(x: x, y: halfHeight))
+                    path.addLine(to: CGPoint(x: x, y: halfHeight + amplitudeHeight))
+                }
+            }
+            .stroke(Color.blue, lineWidth: 2)
         }
     }
 } 

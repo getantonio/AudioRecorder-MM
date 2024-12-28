@@ -30,19 +30,25 @@ struct ContentView: View {
         NavigationView {
             VStack(spacing: 20) {
                 if !recordingManager.permissionGranted {
-                    VStack {
+                    VStack(spacing: 20) {
                         Text("Microphone Access Required")
                             .font(.headline)
-                        Text("Please enable microphone access in Settings to record audio.")
-                            .multilineTextAlignment(.center)
+                        Text("Current Status: \(recordingManager.permissionStatus)")
                             .foregroundColor(.secondary)
-                        #if os(iOS)
-                        Button("Open Settings") {
-                            if let settingsURL = URL(string: UIApplication.openSettingsURLString) {
-                                UIApplication.shared.open(settingsURL)
+                        
+                        Button("Request Microphone Access") {
+                            recordingManager.requestMicrophoneAccess { granted in
+                                print("Permission request completed: \(granted)")
                             }
                         }
-                        .padding()
+                        .buttonStyle(.borderedProminent)
+                        
+                        #if os(macOS)
+                        Button("Open System Settings") {
+                            if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone") {
+                                NSWorkspace.shared.open(url)
+                            }
+                        }
                         #endif
                     }
                     .padding()

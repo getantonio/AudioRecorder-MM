@@ -9,7 +9,7 @@ class AudioRecorderViewModel: ObservableObject {
     @Published var sampleRate: String = "44.1 kHz"
     
     private var recordingManager: RecordingManager
-    private var visualizerViewModel: AudioVisualizerViewModel
+    var visualizerViewModel: AudioVisualizerViewModel
     private var timer: Timer?
     
     init(recordingManager: RecordingManager, visualizerViewModel: AudioVisualizerViewModel) {
@@ -19,6 +19,7 @@ class AudioRecorderViewModel: ObservableObject {
     }
     
     func startRecording() {
+        print("ViewModel: Starting recording")
         let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd-HH-mm-ss"
@@ -29,24 +30,25 @@ class AudioRecorderViewModel: ObservableObject {
         isRecording = true
         isPaused = false
         
-        // Start timer for recording duration
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             self?.recordingTime += 1
-            // Update file size
             self?.updateFileSize(url: audioFilename)
         }
     }
     
     func stopRecording() {
+        print("ViewModel: Stopping recording")
         recordingManager.stopRecording()
         isRecording = false
+        isPaused = false
         timer?.invalidate()
         timer = nil
         recordingTime = 0
     }
     
     func pauseRecording() {
-        // Implement pause functionality
+        print("ViewModel: Toggling pause state")
+        recordingManager.pauseRecording()
         isPaused.toggle()
     }
     
