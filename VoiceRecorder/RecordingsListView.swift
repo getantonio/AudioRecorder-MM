@@ -47,10 +47,16 @@ struct RecordingsListView: View {
                         RecordingRow(recording: recording)
                     }
                     .contextMenu {
-                        Button("Add to Playlist") {
+                        ForEach(playlistManager.playlists) { playlist in
+                            Button(playlist.name) {
+                                playlistManager.addRecording(recording, to: playlist.id)
+                            }
+                        }
+                        Divider()
+                        Button("New Playlist...", action: {
                             selectedRecording = recording
                             showingPlaylistCreation = true
-                        }
+                        })
                     }
                 }
                 .onDelete(perform: deleteRecordings)

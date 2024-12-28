@@ -26,19 +26,23 @@ class PlaylistManager: ObservableObject {
     }
     
     func removeRecording(_ recording: Recording, from playlistId: UUID) {
-        guard let index = playlists.firstIndex(where: { $0.id == playlistId }) else { return }
-        let currentPlaylist = playlists[index]
-        let newPlaylist = Playlist(
-            name: currentPlaylist.name,
-            recordings: currentPlaylist.recordings.filter { $0.id != recording.id }
-        )
-        playlists[index] = newPlaylist
-        savePlaylists()
+        if let index = playlists.firstIndex(where: { $0.id == playlistId }) {
+            let currentPlaylist = playlists[index]
+            let filteredRecordings = currentPlaylist.recordings.filter { $0.id != recording.id }
+            let newPlaylist = Playlist(name: currentPlaylist.name, recordings: filteredRecordings)
+            playlists[index] = newPlaylist
+            savePlaylists()
+        }
     }
     
     func deletePlaylist(_ playlistId: UUID) {
         playlists.removeAll { $0.id == playlistId }
         savePlaylists()
+    }
+    
+    func moveRecording(_ recording: Recording, from sourceId: UUID, to destinationId: UUID) {
+        removeRecording(recording, from: sourceId)
+        addRecording(recording, to: destinationId)
     }
     
     private func savePlaylists() {

@@ -4,10 +4,10 @@ import AVFoundation
 struct PlaylistDetailView: View {
     let playlist: Playlist
     let playlistManager: PlaylistManager
+    @State private var showingDeletePlaylistAlert = false
+    @State private var showingAddRecordingsSheet = false
     @State private var currentlyPlaying: Recording?
     @State private var audioPlayer: AVAudioPlayer?
-    @State private var showingDeleteAlert = false
-    @State private var recordingToDelete: Recording?
     
     var body: some View {
         List {
@@ -16,77 +16,76 @@ struct PlaylistDetailView: View {
                     .foregroundColor(.secondary)
             } else {
                 ForEach(playlist.recordings) { recording in
-                    HStack {
-                        Button(action: {
-                            togglePlayback(for: recording)
-                        }) {
-                            Image(systemName: currentlyPlaying?.id == recording.id ? "pause.circle.fill" : "play.circle.fill")
-                                .font(.title2)
-                                .foregroundColor(.blue)
+                    RecordingRow(recording: recording)
+                        .contextMenu {
+                            Button("Remove from Playlist", role: .destructive) {
+                                playlistManager.removeRecording(recording, from: playlist.id)
+                            }
+                            Button("Move to...") {
+                                // Show move to playlist picker
+                            }
                         }
-                        
-                        RecordingRow(recording: recording)
-                        
-                        Button(action: {
-                            recordingToDelete = recording
-                            showingDeleteAlert = true
-                        }) {
-                            Image(systemName: "minus.circle")
-                                .foregroundColor(.red)
-                        }
-                    }
                 }
             }
         }
         .navigationTitle(playlist.name)
         .toolbar {
-            ToolbarItem {
-                Button(action: {
-                    // Add recordings to playlist
-                }) {
+            ToolbarItem(placement: .primaryAction) {
+                Button(action: { showingAddRecordingsSheet = true }) {
                     Image(systemName: "plus")
                 }
             }
+            ToolbarItem(placement: .destructiveAction) {
+                Button(role: .destructive, action: { showingDeletePlaylistAlert = true }) {
+                    Image(systemName: "trash")
+                }
+            }
         }
-        .alert("Remove Recording", isPresented: $showingDeleteAlert, presenting: recordingToDelete) { recording in
-            Button("Remove", role: .destructive) {
-                removeFromPlaylist(recording)
+        .alert("Delete Playlist", isPresented: $showingDeletePlaylistAlert) {
+            Button("Delete", role: .destructive) {
+                playlistManager.deletePlaylist(playlist.id)
             }
             Button("Cancel", role: .cancel) {}
-        } message: { recording in
-            Text("Are you sure you want to remove '\(recording.name)' from this playlist?")
+        } message: {
+            Text("Are you sure you want to delete this playlist? The recordings will not be deleted.")
         }
-        .onDisappear {
-            stopPlayback()
-        }
-    }
-    
-    private func togglePlayback(for recording: Recording) {
-        if currentlyPlaying?.id == recording.id {
-            stopPlayback()
-        } else {
-            startPlayback(for: recording)
+        .sheet(isPresented: $showingAddRecordingsSheet) {
+            NavigationView {
+                RecordingPickerView(playlist: playlist, playlistManager: playlistManager)
+            }
         }
     }
+}
+
+// New view for picking recordings to add to playlist
+struct RecordingPickerView: View {
+    let playlist: Playlist
+    let playlistManager: PlaylistManager
+    @Environment(\.dismiss) private var dismiss
     
-    private func startPlayback(for recording: Recording) {
-        do {
-            audioPlayer?.stop()
-            audioPlayer = try AVAudioPlayer(contentsOf: recording.url)
-            audioPlayer?.play()
-            currentlyPlaying = recording
-        } catch {
-            print("Error playing recording: \(error)")
+    var body: some View {
+        List {
+            ForEach(RecordingManager.shared.recordings) { recording in
+                Button(action: {
+                    playlistManager.addRecording(recording, to: playlist.id)
+                    dismiss()
+                }) {
+                    HStack {
+                        RecordingRow(recording: recording)
+                        Spacer()
+                        if playlist.recordings.contains(where: { $0.id == recording.id }) {
+                            Image(systemName: "checkmark")
+                                .foregroundColor(.blue)
+                        }
+                    }
+                }
+            }
         }
-    }
-    
-    private func stopPlayback() {
-        audioPlayer?.stop()
-        audioPlayer = nil
-        currentlyPlaying = nil
-    }
-    
-    private func removeFromPlaylist(_ recording: Recording) {
-        playlistManager.removeRecording(recording, from: playlist.id)
+        .navigationTitle("Add Recordings")
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Done") { dismiss() }
+            }
+        }
     }
 } 

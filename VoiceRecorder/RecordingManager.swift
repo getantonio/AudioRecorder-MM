@@ -5,6 +5,7 @@ import AppKit
 #endif
 
 class RecordingManager: NSObject, ObservableObject, AVAudioRecorderDelegate {
+    static let shared = RecordingManager()
     @Published private(set) var permissionGranted = false
     @Published private(set) var permissionStatus = "Checking..."
     private var audioRecorder: AVAudioRecorder?

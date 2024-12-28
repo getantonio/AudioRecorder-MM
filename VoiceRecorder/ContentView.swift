@@ -128,23 +128,34 @@ struct ContentView: View {
                                 }
                             }) {
                                 ZStack {
-                                    // Background circle - reduced size by 30%
+                                    // Background circle with bevel effect
                                     Circle()
-                                        .fill(Color(red: 1.0, green: 0.7, blue: 0.7))
-                                        .frame(width: 56, height: 56) // Reduced from 80 to 56 (30% smaller)
+                                        .fill(
+                                            LinearGradient(
+                                                gradient: Gradient(colors: [
+                                                    Color.blue.opacity(0.8),
+                                                    Color.blue
+                                                ]),
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            )
+                                        )
+                                        .shadow(color: .black.opacity(0.3), radius: 4, x: 2, y: 2)
+                                        .shadow(color: .white.opacity(0.2), radius: 4, x: -2, y: -2)
+                                        .frame(width: 56, height: 56)
                                     
-                                    // Simple microphone icon - reduced size by 30%
+                                    // Microphone icon
                                     Image(systemName: "mic.fill")
                                         .resizable()
                                         .aspectRatio(contentMode: .fit)
-                                        .frame(width: 28, height: 28) // Reduced from 40 to 28 (30% smaller)
-                                        .foregroundColor(.red)
+                                        .frame(width: 28, height: 28)
+                                        .foregroundColor(.white)
                                     
-                                    // Recording indicator ring - reduced size by 30%
+                                    // Recording indicator ring
                                     if viewModel.isRecording {
                                         Circle()
-                                            .stroke(Color.white.opacity(0.5), lineWidth: 2) // Reduced stroke width
-                                            .frame(width: 63, height: 63) // Reduced from 90 to 63 (30% smaller)
+                                            .stroke(Color.white.opacity(0.5), lineWidth: 2)
+                                            .frame(width: 63, height: 63)
                                             .scaleEffect(viewModel.isRecording ? 1.1 : 1.0)
                                             .opacity(viewModel.isRecording ? 1 : 0)
                                             .animation(.easeInOut(duration: 1).repeatForever(autoreverses: true), value: viewModel.isRecording)
