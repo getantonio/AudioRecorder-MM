@@ -59,44 +59,45 @@ struct AudioVisualizerView: View {
                 }
                 .frame(maxHeight: .infinity)
                 
-            case .blocks:
-                // Enhanced blocks visualization
+            case .dots:
+                // Bouncing dots visualization
                 HStack(spacing: 4) {
-                    ForEach(0..<Int(geometry.size.width / 12), id: \.self) { index in
-                        let amplitude = (viewModel.amplitudes[safe: index] ?? 0) * 1.5 // Amplified
-                        VStack(spacing: 2) {
-                            ForEach(0..<Int(amplitude * 12), id: \.self) { _ in
-                                RoundedRectangle(cornerRadius: 1)
-                                    .fill(barGradient)
-                                    .frame(width: 8, height: 4)
-                            }
-                        }
-                        .animation(WaveformStyle.blocks.animation, value: amplitude)
+                    ForEach(0..<Int(geometry.size.width / 8), id: \.self) { index in
+                        let amplitude = (viewModel.amplitudes[safe: index] ?? 0) * 1.5
+                        Circle()
+                            .fill(barGradient)
+                            .frame(width: 6, height: 6)
+                            .offset(y: geometry.size.height * 0.5 * (1 - amplitude))
+                            .animation(WaveformStyle.dots.animation, value: amplitude)
                     }
                 }
-                .frame(maxHeight: .infinity, alignment: .bottom)
+                .frame(maxHeight: .infinity)
                 
             case .wave:
-                // New wave visualization (replacing circle)
+                // Improved wave visualization
                 GeometryReader { geo in
                     Path { path in
                         let width = geo.size.width
                         let height = geo.size.height
                         let midHeight = height / 2
+                        let horizontalStep = width / CGFloat(viewModel.amplitudes.count - 1)
                         
                         path.move(to: CGPoint(x: 0, y: midHeight))
                         
                         for i in 0..<viewModel.amplitudes.count {
-                            let x = width * CGFloat(i) / CGFloat(viewModel.amplitudes.count)
-                            let amplitude = (viewModel.amplitudes[safe: i] ?? 0) * 1.5 // Amplified
-                            let y = midHeight + sin(Double(i) * 0.3) * height * 0.3 * amplitude
+                            let x = CGFloat(i) * horizontalStep
+                            let amplitude = viewModel.amplitudes[safe: i] ?? 0
+                            let y = midHeight + (amplitude == 0 ? 0 : sin(Double(i) * 0.3) * height * 0.3 * amplitude)
                             
                             if i == 0 {
-                                path.move(to: CGPoint(x: x, y: y))
+                                path.move(to: CGPoint(x: x, y: midHeight))
                             } else {
                                 path.addLine(to: CGPoint(x: x, y: y))
                             }
                         }
+                        
+                        // Add final point to reach the end of the view
+                        path.addLine(to: CGPoint(x: width, y: midHeight))
                     }
                     .stroke(barGradient, lineWidth: 3)
                     .animation(WaveformStyle.wave.animation, value: viewModel.amplitudes)

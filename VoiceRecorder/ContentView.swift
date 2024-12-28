@@ -116,55 +116,71 @@ struct ContentView: View {
                     
                     // Recording controls
                     HStack {
-                        Spacer()
+                        Spacer(minLength: 50)
                         
-                        // Pause button (smaller and to the left)
-                        Button(action: viewModel.pauseRecording) {
-                            Circle()
-                                .fill(Color(red: 0.15, green: 0.15, blue: 0.25))
-                                .frame(width: 40, height: 40)  // 50% smaller
-                                .overlay(
-                                    Image(systemName: viewModel.isPaused ? "play.fill" : "pause.fill")
-                                        .font(.system(size: 16))  // Smaller icon
-                                        .foregroundColor(.white)
-                                )
-                                .shadow(color: .black.opacity(0.2), radius: 2, y: 2)
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                        .disabled(!viewModel.isRecording)
-                        .opacity(viewModel.isRecording ? 1 : 0.5)
-                        .offset(x: 40)  // Move closer to record button
-                        
-                        // Record button (centered)
-                        Button(action: {
-                            if viewModel.isRecording {
-                                viewModel.stopRecording()
-                            } else {
-                                viewModel.startRecording()
-                            }
-                        }) {
-                            ZStack {
-                                Circle()
-                                    .fill(Color.red)
-                                    .frame(width: 80, height: 80)
-                                    .shadow(color: viewModel.isRecording ? Color.red.opacity(0.5) : .clear,
-                                            radius: viewModel.isRecording ? 10 : 0)
-                                
+                        ZStack {
+                            // Record button (centered)
+                            Button(action: {
                                 if viewModel.isRecording {
-                                    RoundedRectangle(cornerRadius: 4)
-                                        .fill(Color.white)
-                                        .frame(width: 28, height: 28)
+                                    viewModel.stopRecording()
                                 } else {
+                                    viewModel.startRecording()
+                                }
+                            }) {
+                                ZStack {
+                                    // Background circle
                                     Circle()
-                                        .fill(Color.white)
-                                        .frame(width: 60, height: 60)
-                                        .shadow(color: .black.opacity(0.2), radius: 2, y: 2)
+                                        .fill(Color(red: 1.0, green: 0.7, blue: 0.7))  // Light pink background
+                                        .frame(width: 80, height: 80)
+                                    
+                                    // Simple microphone icon
+                                    Image(systemName: "mic.fill")
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fit)
+                                        .frame(width: 40, height: 40)
+                                        .foregroundColor(.red)
+                                    
+                                    // Recording indicator ring
+                                    if viewModel.isRecording {
+                                        Circle()
+                                            .stroke(Color.white.opacity(0.5), lineWidth: 3)
+                                            .frame(width: 90, height: 90)
+                                            .scaleEffect(viewModel.isRecording ? 1.1 : 1.0)
+                                            .opacity(viewModel.isRecording ? 1 : 0)
+                                            .animation(.easeInOut(duration: 1).repeatForever(autoreverses: true), value: viewModel.isRecording)
+                                    }
                                 }
                             }
+                            .buttonStyle(PlainButtonStyle())
+                            
+                            // Pause button (positioned to the right and down)
+                            Button(action: viewModel.pauseRecording) {
+                                Circle()
+                                    .fill(
+                                        LinearGradient(
+                                            gradient: Gradient(colors: [
+                                                Color(red: 0.2, green: 0.2, blue: 0.3),
+                                                Color(red: 0.15, green: 0.15, blue: 0.25)
+                                            ]),
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                                    .frame(width: 40, height: 40)
+                                    .overlay(
+                                        Image(systemName: viewModel.isPaused ? "play.fill" : "pause.fill")
+                                            .font(.system(size: 16))
+                                            .foregroundColor(.white)
+                                    )
+                                    .shadow(color: .black.opacity(0.2), radius: 2)
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                            .disabled(!viewModel.isRecording)
+                            .opacity(viewModel.isRecording ? 1 : 0.5)
+                            .offset(x: 75, y: 40) // 75px right (55 + 20) and 40px down
                         }
-                        .buttonStyle(PlainButtonStyle())
                         
-                        Spacer()
+                        Spacer(minLength: 50)
                     }
                     .padding(.bottom, 50)
                 }
@@ -183,7 +199,7 @@ struct ContentView: View {
     private func visualizerIcon(for style: WaveformStyle) -> String {
         switch style {
         case .bars: return "waveform.path.ecg"
-        case .blocks: return "square.grid.3x3.fill"
+        case .dots: return "circle.grid.3x3"
         case .wave: return "waveform"
         case .spectrum: return "chart.bar.xaxis"
         }
