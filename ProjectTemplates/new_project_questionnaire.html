@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Requirements Questionnaire</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --background-color: #f5f6fa;
+            --text-color: #2c3e50;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--background-color);
+            color: var(--text-color);
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        h1, h2 {
+            color: var(--primary-color);
+        }
+
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #eee;
+            border-radius: 5px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        input[type="text"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        textarea {
+            min-height: 100px;
+        }
+
+        .checkbox-group {
+            margin: 10px 0;
+        }
+
+        button {
+            background-color: var(--secondary-color);
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        #output {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            white-space: pre-wrap;
+        }
+
+        .required:after {
+            content: " *";
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Project Requirements Questionnaire</h1>
+        
+        <form id="projectForm">
+            <div class="section">
+                <h2>1. Basic Project Information</h2>
+                <div class="form-group">
+                    <label class="required">Project Name:</label>
+                    <input type="text" id="projectName" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="required">Project Type:</label>
+                    <select id="projectType" required>
+                        <option value="">Select type...</option>
+                        <option value="ios">iOS App</option>
+                        <option value="macos">macOS App</option>
+                        <option value="tvos">tvOS App</option>
+                        <option value="watchos">watchOS App</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Target Platform Version:</label>
+                    <input type="text" id="platformVersion" placeholder="e.g., iOS 15+, macOS 13+">
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>2. Technical Requirements</h2>
+                <div class="form-group">
+                    <label>Preferred UI Framework:</label>
+                    <select id="uiFramework">
+                        <option value="">Choose framework...</option>
+                        <option value="swiftui">SwiftUI</option>
+                        <option value="uikit">UIKit</option>
+                        <option value="appkit">AppKit</option>
+                        <option value="undecided">Not sure yet</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Required Device Capabilities:</label>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="camera"> <label for="camera">Camera</label><br>
+                        <input type="checkbox" id="microphone"> <label for="microphone">Microphone</label><br>
+                        <input type="checkbox" id="location"> <label for="location">Location Services</label><br>
+                        <input type="checkbox" id="bluetooth"> <label for="bluetooth">Bluetooth</label><br>
+                        <input type="checkbox" id="notifications"> <label for="notifications">Push Notifications</label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Data Storage Requirements:</label>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="userDefaults"> <label for="userDefaults">UserDefaults</label><br>
+                        <input type="checkbox" id="coreData"> <label for="coreData">Core Data</label><br>
+                        <input type="checkbox" id="fileSystem"> <label for="fileSystem">File System</label><br>
+                        <input type="checkbox" id="cloudKit"> <label for="cloudKit">CloudKit</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>3. Feature Description</h2>
+                <div class="form-group">
+                    <label>Core Features:</label>
+                    <textarea id="coreFeatures" placeholder="List the main features your app needs to have"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Nice-to-Have Features:</label>
+                    <textarea id="optionalFeatures" placeholder="List any additional features you'd like to add later"></textarea>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>4. Additional Information</h2>
+                <div class="form-group">
+                    <label>External Dependencies:</label>
+                    <textarea id="dependencies" placeholder="List any known third-party libraries or frameworks you plan to use"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Special Requirements or Constraints:</label>
+                    <textarea id="constraints" placeholder="Any specific requirements or limitations to consider"></textarea>
+                </div>
+            </div>
+
+            <button type="submit">Generate Project Template</button>
+        </form>
+
+        <div id="output"></div>
+    </div>
+
+    <script>
+        document.getElementById('projectForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = {
+                projectName: document.getElementById('projectName').value,
+                projectType: document.getElementById('projectType').value,
+                platformVersion: document.getElementById('platformVersion').value || 'Latest',
+                uiFramework: document.getElementById('uiFramework').value,
+                capabilities: {
+                    camera: document.getElementById('camera').checked,
+                    microphone: document.getElementById('microphone').checked,
+                    location: document.getElementById('location').checked,
+                    bluetooth: document.getElementById('bluetooth').checked,
+                    notifications: document.getElementById('notifications').checked
+                },
+                storage: {
+                    userDefaults: document.getElementById('userDefaults').checked,
+                    coreData: document.getElementById('coreData').checked,
+                    fileSystem: document.getElementById('fileSystem').checked,
+                    cloudKit: document.getElementById('cloudKit').checked
+                },
+                coreFeatures: document.getElementById('coreFeatures').value,
+                optionalFeatures: document.getElementById('optionalFeatures').value,
+                dependencies: document.getElementById('dependencies').value,
+                constraints: document.getElementById('constraints').value
+            };
+
+            const output = generateMarkdown(formData);
+            document.getElementById('output').textContent = output;
+        });
+
+        function generateMarkdown(data) {
+            return `# Project Context
+
+## Project Type
+- Project Name: ${data.projectName}
+- Type: ${data.projectType}
+- Target Platform: ${data.platformVersion}
+- UI Framework: ${data.uiFramework || 'To be determined'}
+
+## Required Capabilities
+${Object.entries(data.capabilities)
+    .filter(([, value]) => value)
+    .map(([key]) => `- ${key.charAt(0).toUpperCase() + key.slice(1)}`)
+    .join('\n')}
+
+## Storage Requirements
+${Object.entries(data.storage)
+    .filter(([, value]) => value)
+    .map(([key]) => `- ${key.charAt(0).toUpperCase() + key.slice(1)}`)
+    .join('\n')}
+
+## Core Features
+${data.coreFeatures || 'To be determined'}
+
+## Optional Features
+${data.optionalFeatures || 'None specified'}
+
+## Dependencies
+${data.dependencies || 'None specified'}
+
+## Special Requirements/Constraints
+${data.constraints || 'None specified'}`;
+        }
+    </script>
+</body>
+</html> 
